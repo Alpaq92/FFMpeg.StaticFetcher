@@ -1,9 +1,13 @@
 name: Release
 
-# Releases are deliberate only: run this manually from the Actions tab and pick the bump.
-# (Previously also ran on every push to main + a monthly schedule, which auto-published a
-# version on routine commits — removed so that pushing to main never publishes.)
+# Auto-deploy: every push to main publishes a new version (patch by default; put [major] in
+# the commit subject or BREAKING CHANGE in the body to bump higher), plus a monthly schedule
+# and a manual dispatch. NOTE: routine commits to main WILL cut a NuGet release.
 on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 3 1 * *'
   workflow_dispatch:
     inputs:
       bump:
