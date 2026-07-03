@@ -1,10 +1,9 @@
 name: Release
 
+# Releases are deliberate only: run this manually from the Actions tab and pick the bump.
+# (Previously also ran on every push to main + a monthly schedule, which auto-published a
+# version on routine commits — removed so that pushing to main never publishes.)
 on:
-  push:
-    branches: [main]
-  schedule:
-    - cron: '0 3 1 * *'
   workflow_dispatch:
     inputs:
       bump:
