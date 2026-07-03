@@ -1,8 +1,12 @@
 # FFMpeg.StaticFetcher
 
-[![NuGet](https://img.shields.io/nuget/v/FFMpeg.StaticFetcher.svg)](https://www.nuget.org/packages/FFMpeg.StaticFetcher)
-[![CI](https://img.shields.io/github/actions/workflow/status/Alpaq92/FFMpeg.StaticFetcher/ci.yml?branch=main&label=CI)](https://github.com/Alpaq92/FFMpeg.StaticFetcher/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
+<p align="center">
+  <a href="https://www.nuget.org/packages/FFMpeg.StaticFetcher"><img src="https://img.shields.io/nuget/v/FFMpeg.StaticFetcher.svg?label=NuGet&color=blue" alt="NuGet version" /></a>
+  <a href="https://www.nuget.org/packages/FFMpeg.StaticFetcher"><img src="https://img.shields.io/nuget/dt/FFMpeg.StaticFetcher.svg?label=Downloads&color=blue" alt="NuGet downloads" /></a>
+  <a href="https://github.com/Alpaq92/FFMpeg.StaticFetcher/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Alpaq92/FFMpeg.StaticFetcher/ci.yml?branch=main&label=CI" alt="CI" /></a>
+  <a href="https://github.com/Alpaq92/FFMpeg.StaticFetcher/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/Alpaq92/FFMpeg.StaticFetcher/release.yml?branch=main&label=Release" alt="Release" /></a>
+  <a href="LICENSE.md"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
+</p>
 
 A small .NET 8 library that downloads static **FFmpeg** and **FFprobe** binaries. It auto-detects your OS and architecture, auto-detects the downloaded archive format (gzip, xz, bzip2, zip, 7z, rar, their `tar.*` variants, plain tar, or a raw binary), and leaves ready-to-run executables in your output folder.
 
