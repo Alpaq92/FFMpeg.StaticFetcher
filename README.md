@@ -8,7 +8,7 @@
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
 </p>
 
-A small .NET 8 library that downloads static **FFmpeg** and **FFprobe** binaries. It auto-detects your OS and architecture, auto-detects the downloaded archive format (gzip, xz, bzip2, zip, 7z, rar, their `tar.*` variants, plain tar, or a raw binary), and leaves ready-to-run executables in your output folder.
+A small .NET 8 library that downloads static **FFmpeg** and **FFprobe** binaries. It auto-detects both your OS/architecture and the downloaded archive format (gzip, xz, bzip2, zip, 7z, rar, their `tar.*` variants, plain tar, or a raw binary), then leaves ready-to-run executables in your output folder.
 
 ## Installation
 
