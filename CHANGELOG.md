@@ -1,11 +1,17 @@
 # Changelog
 
 All notable changes to this project are documented here. The format is based on
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to follow
-[Semantic Versioning](https://semver.org/spec/v2.0.0.html). While the package is pre-1.0, breaking
-changes may ship in minor releases and are called out under **Breaking** below.
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+_Nothing yet._
+
+## [1.0.0] - 2026-07-03
+
+First stable release. (Versions `0.0.1`–`0.0.3` were unintended preview publishes of the same
+code; they remain available but unsupported — `1.0.0` is the first supported release.)
 
 ### Breaking
 
