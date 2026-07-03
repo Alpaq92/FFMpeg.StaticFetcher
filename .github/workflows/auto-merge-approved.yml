@@ -1,0 +1,98 @@
+name: Auto-merge approved PRs after cool-off
+
+# Scans open PRs to main and merges those that meet ALL of:
+#   - review decision is APPROVED (a collaborator or CodeRabbit approved)
+#   - that approval is at least COOL_OFF_DAYS old (default 7) — the clock starts at
+#     APPROVAL, not at PR creation
+#   - GitHub reports the PR mergeable (no conflicts). Required checks (CI + CodeQL) are
+#     enforced by the branch ruleset, so `--auto` won't actually merge until they pass.
+#
+# This is a one-week sanity window between approval and shipping. To ship sooner, an
+# admin or maintainer can merge by hand (ruleset bypass), or run this via
+# workflow_dispatch with a smaller cool-off.
+#
+# Dependabot minor/patch PRs are auto-approved and set to auto-merge by
+# dependabot-auto-merge.yml, so they normally merge as soon as CI/CodeQL pass — before this
+# 6-hourly scan runs. They ARE approved, and this workflow does not filter by author, so a
+# still-open approved Dependabot PR could be picked up here too; that's harmless (it just
+# re-requests the same auto-merge).
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      cool-off-days:
+        description: 'Days to wait between approval and merge (default 7)'
+        required: false
+        default: '7'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: auto-merge-approved
+  cancel-in-progress: false
+
+jobs:
+  auto-merge:
+    name: Merge approved PRs past the cool-off window
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find and merge eligible PRs
+        env:
+          # A PAT (optional) lets the resulting push trigger downstream workflows (release.yml);
+          # GITHUB_TOKEN still merges fine but its push won't re-trigger other workflows.
+          GH_TOKEN: ${{ secrets.ADMIN_PAT || secrets.GITHUB_TOKEN }}
+          COOL_OFF_DAYS: ${{ inputs.cool-off-days || '7' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          threshold_epoch=$(date -u -d "$COOL_OFF_DAYS days ago" +%s)
+          echo "Merging PRs approved on or before $(date -u -d "@$threshold_epoch" --iso-8601=seconds) (>= $COOL_OFF_DAYS days ago)"
+
+          # Approved, non-conflicting open PRs targeting main. We reject only CONFLICTING
+          # (not "!= MERGEABLE"): GitHub computes mergeability lazily and may report UNKNOWN
+          # for a run, which shouldn't skip an otherwise-eligible PR. `gh pr merge --auto` is
+          # the backstop — it won't complete until required checks + ruleset conditions hold.
+          candidates=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --base main \
+            --state open \
+            --json number,reviewDecision,mergeable \
+            --jq '.[] | select(.reviewDecision == "APPROVED") | select(.mergeable != "CONFLICTING") | .number')
+
+          if [ -z "$candidates" ]; then
+            echo "No approved + mergeable PRs right now."
+            exit 0
+          fi
+
+          now_epoch=$(date -u +%s)
+
+          for pr in $candidates; do
+            # Timestamp of the most recent APPROVED review = when the cool-off clock started.
+            approved_at=$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" \
+              --json reviews \
+              --jq '[.reviews[] | select(.state == "APPROVED") | .submittedAt] | sort | last')
+
+            if [ -z "$approved_at" ] || [ "$approved_at" = "null" ]; then
+              echo "PR #$pr: APPROVED decision but no approval timestamp found — skipping."
+              continue
+            fi
+
+            approved_epoch=$(date -u -d "$approved_at" +%s)
+            age_days=$(( (now_epoch - approved_epoch) / 86400 ))
+
+            if [ "$approved_epoch" -le "$threshold_epoch" ]; then
+              echo "PR #$pr: approved $approved_at (${age_days}d ago) → merging (auto)."
+              gh pr merge "$pr" \
+                --repo "$GITHUB_REPOSITORY" \
+                --squash \
+                --auto \
+                --delete-branch=false
+            else
+              echo "PR #$pr: approved $approved_at (${age_days}d ago) → still within cool-off, skipping."
+            fi
+          done

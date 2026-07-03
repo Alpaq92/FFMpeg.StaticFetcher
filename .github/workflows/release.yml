@@ -1,0 +1,156 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Pack & Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if release is needed
+        id: check
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "Manual dispatch → always release"
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          LATEST_TAG=$(git tag -l 'v*.*.*' --sort=-v:refname | head -n1)
+          if [[ -z "$LATEST_TAG" ]]; then
+            echo "No previous tag → release"
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          HEAD_SHA=$(git rev-parse HEAD)
+          TAG_SHA=$(git rev-parse "$LATEST_TAG"^{commit})
+          if [[ "$HEAD_SHA" == "$TAG_SHA" ]]; then
+            echo "HEAD is at $LATEST_TAG (no new commits) → skipping release"
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Commits since $LATEST_TAG → release"
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup .NET
+        if: steps.check.outputs.needed == 'true'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Determine bump type
+        if: steps.check.outputs.needed == 'true'
+        id: bump
+        run: |
+          case "${GITHUB_EVENT_NAME}" in
+            workflow_dispatch)
+              echo "type=${{ inputs.bump }}" >> "$GITHUB_OUTPUT"
+              ;;
+            schedule)
+              echo "Scheduled monthly release → patch bump"
+              echo "type=patch" >> "$GITHUB_OUTPUT"
+              ;;
+            push)
+              AUTHOR="$(git log -1 --format='%an' HEAD)"
+              SUBJECT="$(git log -1 --format='%s' HEAD)"
+              BODY="$(git log -1 --format='%B' HEAD)"
+              # Opt-in major bump: include [major] in the merge commit subject, or "BREAKING CHANGE"
+              # anywhere in the commit message (Conventional Commits).
+              if [[ "$SUBJECT" == *"[major]"* ]] || [[ "$BODY" == *"BREAKING CHANGE"* ]]; then
+                echo "Detected [major] marker → major bump"
+                echo "type=major" >> "$GITHUB_OUTPUT"
+              # A merged Dependabot NuGet PR (auto-merged via .github/workflows/dependabot-auto-merge.yml)
+              # shows up on main as a commit authored by dependabot[bot] that touches a .csproj file.
+              # Those releases are a dependency refresh, so we bump minor instead of patch.
+              elif { [[ "$AUTHOR" == *"dependabot"* ]] || [[ "$SUBJECT" == "Bump "* ]]; } \
+                 && git diff --name-only HEAD~1 HEAD | grep -qE '\.csproj$|packages\.lock\.json$'; then
+                echo "Detected Dependabot NuGet merge → minor bump"
+                echo "type=minor" >> "$GITHUB_OUTPUT"
+              else
+                echo "type=patch" >> "$GITHUB_OUTPUT"
+              fi
+              ;;
+            *)
+              echo "type=patch" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Compute next version
+        if: steps.check.outputs.needed == 'true'
+        id: version
+        run: |
+          LATEST=$(git tag -l 'v*.*.*' --sort=-v:refname | head -n1)
+          LATEST=${LATEST:-v0.0.0}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST#v}"
+          case "${{ steps.bump.outputs.type }}" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+          NEXT="${MAJOR}.${MINOR}.${PATCH}"
+          echo "value=${NEXT}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${NEXT}" >> "$GITHUB_OUTPUT"
+          echo "Releasing ${NEXT} (bump: ${{ steps.bump.outputs.type }}, previous: ${LATEST})"
+
+      - name: Restore
+        if: steps.check.outputs.needed == 'true'
+        run: dotnet restore
+
+      - name: Build
+        if: steps.check.outputs.needed == 'true'
+        run: dotnet build --configuration Release --no-restore -p:Version=${{ steps.version.outputs.value }}
+
+      - name: Test
+        if: steps.check.outputs.needed == 'true'
+        run: dotnet test --configuration Release --no-build --verbosity normal
+
+      - name: Pack
+        if: steps.check.outputs.needed == 'true'
+        run: dotnet pack FFMpeg.StaticFetcher/FFMpeg.StaticFetcher.csproj --configuration Release --no-build -p:PackageVersion=${{ steps.version.outputs.value }} -o ./nupkg
+
+      - name: Push to NuGet.org
+        if: steps.check.outputs.needed == 'true'
+        run: dotnet nuget push "./nupkg/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Create git tag
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin ${{ steps.version.outputs.tag }}
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.needed == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          files: ./nupkg/*
+          generate_release_notes: true

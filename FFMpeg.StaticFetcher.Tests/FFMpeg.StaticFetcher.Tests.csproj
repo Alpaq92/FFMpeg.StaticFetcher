@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="10.0.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FFMpeg.StaticFetcher\FFMpeg.StaticFetcher.csproj" />
+    <!-- Build the stub ffmpeg and copy its apphost next to the tests, but don't link it as an assembly. -->
+    <ProjectReference Include="..\FakeFFmpeg\FakeFFmpeg.csproj" ReferenceOutputAssembly="false" Private="false" />
+  </ItemGroup>
+
+  <!-- Copy the FakeFFmpeg apphost (and its companion files) into the test output so ResolveLocalVersion can spawn it. -->
+  <Target Name="CopyFakeFFmpeg" AfterTargets="Build">
+    <ItemGroup>
+      <FakeFFmpegFiles Include="..\FakeFFmpeg\bin\$(Configuration)\$(TargetFramework)\FakeFFmpeg*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FakeFFmpegFiles)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

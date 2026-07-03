@@ -1,0 +1,4 @@
+# Default owner for everything in the repo. Requested as a reviewer on every PR.
+# (Code-owner review is NOT hard-required by the branch ruleset — this just assigns
+# the reviewer automatically.)
+* @Alpaq92

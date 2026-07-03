@@ -1,0 +1,40 @@
+# CodeRabbit configuration — https://docs.coderabbit.ai/reference/configuration
+#
+# .NET 8 NuGet library (FFMpeg.StaticFetcher) + its test/stub projects. Auto-review
+# every PR (including bot PRs from Dependabot), low-noise "chill" profile, real
+# Approve / Request-changes reviews so CodeRabbit's approval can satisfy the branch
+# ruleset's "1 approving review" requirement, skipping generated / build output.
+
+language: en-US
+
+reviews:
+  profile: chill
+  # Post a real "Request changes" review when issues are found and "Approve" when the
+  # PR is clean — the approval is what lets a contributor's PR meet the ruleset gate.
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+
+  path_filters:
+    - "!**/bin/**"
+    - "!**/obj/**"
+    - "!nupkg/**"
+    - "!publish/**"
+    - "!**/TestResults/**"
+    - "!**/*.g.cs"
+    - "!**/*.Designer.cs"
+
+  auto_review:
+    enabled: true
+    # Don't review drafts; review as soon as a PR is marked ready.
+    drafts: false
+    base_branches:
+      - main
+    # Review EVERY PR, including Dependabot's. CodeRabbit approves under its own bot
+    # identity; admins/maintainers can still merge via the ruleset bypass when needed.
+    ignore_usernames: []
+
+chat:
+  auto_reply: true

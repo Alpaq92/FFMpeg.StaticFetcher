@@ -1,0 +1,42 @@
+name: Auto-merge trusted-author PRs
+
+# Fast-tracks PRs opened by the repo owner: approves (as github-actions[bot]) and enables
+# auto-merge as soon as required checks pass — no external review, no 7-day cool-off. The
+# owner can't approve their own PR, and the ruleset requires 1 approval, so this bot approval
+# is what lets the owner's PR auto-merge. It counts because repo-settings.yml enables
+# "Allow GitHub Actions to approve PRs". CI + CodeQL still gate the merge (--auto waits).
+#
+# Uses `pull_request` (not pull_request_target): the owner's PRs come from branches in this
+# repo, where GITHUB_TOKEN is read-write and can approve/merge. No admin PAT is exposed to a
+# PR-triggered run, and no untrusted PR code is checked out or executed here.
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  approve-and-auto-merge:
+    name: Approve + queue auto-merge for trusted author
+    if: >
+      !github.event.pull_request.draft &&
+      contains(fromJson('["Alpaq92"]'), github.event.pull_request.user.login)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approve and enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          echo "Fast-tracking PR #$PR_NUMBER (by $PR_AUTHOR): approve + auto-merge"
+          gh pr review "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --approve
+          gh pr merge "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --squash \
+            --auto \
+            --delete-branch=false
