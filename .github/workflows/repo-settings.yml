@@ -35,15 +35,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Verify PAT is available
+        id: verify
         env:
           GH_TOKEN: ${{ secrets.ADMIN_PAT }}
         run: |
           if [ -z "${GH_TOKEN}" ]; then
-            echo "::error::ADMIN_PAT secret is unset — repo settings PATCH requires a PAT with Administration scope. GITHUB_TOKEN can't be used here."
-            exit 1
+            echo "::warning::ADMIN_PAT secret is unset — skipping repo-settings sync. The settings were applied at setup via gh; add an ADMIN_PAT (Administration: read/write) to enable syncing them from CI."
+            echo "has_pat=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_pat=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Apply settings
+        if: steps.verify.outputs.has_pat == 'true'
         env:
           GH_TOKEN: ${{ secrets.ADMIN_PAT }}
         run: |

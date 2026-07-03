@@ -36,7 +36,14 @@ jobs:
 
       - name: Check if release is needed
         id: check
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
+          if [[ -z "${NUGET_API_KEY}" ]]; then
+            echo "NUGET_API_KEY is not set → skipping release. Add the secret to enable publishing to NuGet.org."
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
             echo "Manual dispatch → always release"
             echo "needed=true" >> "$GITHUB_OUTPUT"
