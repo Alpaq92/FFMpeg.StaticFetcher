@@ -18,7 +18,7 @@
     <Description>Downloads static FFMpeg and FFProbe binaries from eugeneware/ffmpeg-static GitHub releases for the current platform</Description>
     <PackageTags>ffmpeg ffprobe convert video audio mediafile download install static</PackageTags>
 
-    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReadmeFile>NUGET.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageIcon>icon.png</PackageIcon>
 
@@ -37,7 +37,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\NUGET.md" Pack="true" PackagePath="\" />
     <None Include="..\LICENSE.md" Pack="true" PackagePath="\" />
     <None Include="..\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
