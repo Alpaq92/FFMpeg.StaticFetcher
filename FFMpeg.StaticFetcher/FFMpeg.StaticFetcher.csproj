@@ -44,7 +44,7 @@
 
   <ItemGroup>
     <!-- SourceLink is provided by the .NET 8+ SDK; no explicit package reference needed. -->
-    <PackageReference Include="SharpCompress" Version="0.49.1" />
+    <PackageReference Include="SharpCompress" Version="0.50.2" />
   </ItemGroup>
 
   <ItemGroup>
